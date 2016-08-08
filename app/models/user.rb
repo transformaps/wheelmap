@@ -7,12 +7,9 @@ class User < ActiveRecord::Base
   attr_accessor :first_time
 
   # Setup accessible (or protected) attributes for your model
-  attr_accessible :email, :password, :password_confirmation, :remember_me, :wants_newsletter, :first_name, :last_name, :osm_username, :terms, :privacy_policy, :first_time, :provider_ids, :osm_id
+  attr_accessible :email, :remember_me, :wants_newsletter, :first_name, :last_name, :osm_username, :terms, :privacy_policy, :first_time, :provider_ids, :osm_id
 
-  validates :password, :confirmation =>true
-
-  validate :ensure_email_when_password_set
-  validate :ensure_password_when_email_set, :if => :first_time?
+  validates :email, presence: true
 
   before_save :ensure_authentication_token
   before_save :ensure_api_key
@@ -22,7 +19,6 @@ class User < ActiveRecord::Base
   scope :no_osm_id, -> { where(osm_id: nil) }
   scope :no_oauth_token, -> { where(oauth_token: nil) }
   scope :no_osm_id_and_oauth_token, -> { where( osm_id: nil, oauth_token: nil) }
-  scope :no_password, -> { where(encrypted_password: "") }
 
 
   before_save :send_email_confirmation,
@@ -51,10 +47,6 @@ class User < ActiveRecord::Base
     update_tracked_fields_without_terms!(request) if terms?
   end
   alias_method_chain :update_tracked_fields!, :terms
-
-  def password_required?
-    false
-  end
 
   def email_required?
     false
@@ -98,11 +90,6 @@ class User < ActiveRecord::Base
     save(:validate => false)
   end
 
-  def self.authenticate(email, password)
-    user = User.where(:email => email).first
-    user if user && user.valid_password?(password)
-  end
-
 
   def self.wheelmap_visitor
     find_by_email('visitor@wheelmap.org')
@@ -139,14 +126,6 @@ class User < ActiveRecord::Base
 
   def notify_admins
     UserMailer.user_destroyed(self).deliver
-  end
-
-  def ensure_email_when_password_set
-    errors.add_on_blank(:email)     if !password.blank? and email.blank?
-  end
-
-  def ensure_password_when_email_set
-    errors.add_on_blank(:password)  if !email.blank? and password.blank?
   end
 
   def full_name

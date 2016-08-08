@@ -3,6 +3,7 @@ class UsersController < ApplicationController
   include AuthenticateUserFromToken
 
   skip_before_filter :verify_authenticity_token, :only => :authenticate
+  skip_before_filter :check_user_email!, only: [:after_signup_edit, :after_signup_update]
 
   before_filter :authenticate_user!,        :except => [:authenticate, :signed_in]
   before_filter :authenticate_mobile_user,  :only => :authenticate

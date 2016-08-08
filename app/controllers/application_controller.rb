@@ -14,6 +14,8 @@ class ApplicationController < ActionController::Base
 
   before_filter :set_geoip_cookie
 
+  before_filter :check_user_email!
+
   rescue_from Errno::ETIMEDOUT, :with => :timeout
   rescue_from Timeout::Error,   :with => :timeout
   rescue_from Net::ReadTimeout, :with => :timeout
@@ -36,6 +38,21 @@ class ApplicationController < ActionController::Base
 
   def default_url_options(options = nil)
     {:locale => I18n.locale}
+  end
+
+  def check_user_email!
+    # User logged in and has a blank email attribute?
+    if !current_user.blank? && current_user.email.blank?
+      current_user.errors.add_on_blank(:email)
+
+      respond_to do |format|
+        format.html{
+          redirect_to after_signup_edit_profile_path
+        }
+        format.json{render_exception(Exception.new(current_user.errors.full_messages.to_sentence), 403)}
+        format.xml{render_exception(Exception.new(current_user.errors.full_messages.to_sentence), 403)}
+      end
+    end
   end
 
   def authenticate_terms!
